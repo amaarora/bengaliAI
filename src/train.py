@@ -73,11 +73,12 @@ def evaluate(dataset, data_loader, model):
         vowel_diacritic = vowel_diacritic.to(DEVICE, dtype=torch.long)
         consonant_diacritic = consonant_diacritic.to(DEVICE, dtype=torch.long)
 
-        outputs = model(image)
-        targets = (grapheme_root, vowel_diacritic, consonant_diacritic)
-        loss = loss_func(outputs, targets)
-        final_loss += loss
-    return final_loss/counter #better to use actual metric of comp and loss
+        with torch.no_grad():
+            outputs = model(image)
+            targets = (grapheme_root, vowel_diacritic, consonant_diacritic)
+            loss = loss_func(outputs, targets)
+            final_loss += loss
+    return final_loss/counter #TODO:better to use actual metric of comp and loss
 
 
 def main():

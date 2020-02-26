@@ -7,12 +7,15 @@ from PIL import Image
 import numpy as np
 import joblib
 import albumentations
+from pathlib import Path
 
 class BengaliDataset():
-    def __init__(self, folds, height=137, width=236):
-        df = pd.read_csv("../data/train_folds.csv")
+    def __init__(self, folds, data_path="../data", height=137, width=236):
+        data_path = Path(data_path)
+        df = pd.read_csv(data_path/'train_folds.csv')
         df = df[['image_id', 'grapheme_root', 'vowel_diacritic', 'consonant_diacritic', 'kfold']]
         df = df[df.kfold.isin(folds)].reset_index(drop=True)
+        self.data_path=data_path
         self.img_ids = df['image_id'].values
         self.grapheme_root = df['grapheme_root'].values
         self.vowel_diacritic = df['vowel_diacritic'].values
@@ -36,7 +39,7 @@ class BengaliDataset():
         return len(self.img_ids)
     
     def __getitem__(self, idx):
-        image = joblib.load(f"../data/image_pickles/{self.img_ids[idx]}.pkl")
+        image = joblib.load(f"{self.data_path}/image_pickles/{self.img_ids[idx]}.pkl")
         image = image.reshape(self.h, self.w).astype(float)
         image = Image.fromarray(image).convert("RGB")
         image = self.aug(image=np.array(image))['image']
