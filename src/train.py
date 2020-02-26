@@ -6,6 +6,10 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 from pdb import set_trace
+import logging 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 DEVICE = 'cuda'
 TRAINING_FOLDS_CSV = os.environ.get("TRAINING_FOLDS_CSV")
@@ -52,7 +56,6 @@ def train(dataset, data_loader, model, optimizer):
         outputs = model(image)
         targets = (grapheme_root, vowel_diacritic, consonant_diacritic)
         loss = loss_func(outputs, targets)
-
         loss.backward()
         optimizer.step()
 
@@ -119,6 +122,7 @@ def main():
     for epoch in range(EPOCHS):
         train(train_dataset, train_dataloader, model, optimizer)
         val_score = evaluate(valid_dataset, valid_dataloader, model)
+        logger.info(f"validation_loss: {val_score}")
         scheduler.step(val_score)
         torch.save(model.state_dict(), f"{BASE_MODEL}_valfold{VALIDATION_FOLDS[0]}.bin")
         
