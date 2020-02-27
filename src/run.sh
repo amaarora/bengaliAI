@@ -11,9 +11,9 @@ export TRAINING_FOLDS="(0,1,2,3)"
 export VALIDATION_FOLDS="(4,)"
 export TRAINING_FOLDS_CSV="../data/training_folds.csv"
 
-# export TRAINING_FOLDS="(0,1,4,3)"
-# export VALIDATION_FOLDS="(2,)"
-# python train.py
+export TRAINING_FOLDS="(0,1,4,3)"
+export VALIDATION_FOLDS="(2,)"
+python train.py
 
 echo "running new model"
 export TRAINING_FOLDS="(0,1,2,4)"

@@ -38,7 +38,7 @@ def loss_func(outputs, targets):
     return (l1+l2+l3)/3 #TODO: can do weighted average which might give btr result
 
 
-def train(dataset, data_loader, model, optimizer):
+def train(dataset, data_loader, model, optimizer, scheduler):
     model.train()
 
     for bi, d in tqdm(enumerate(data_loader), total=int(len(dataset) / data_loader.batch_size)):
@@ -58,6 +58,7 @@ def train(dataset, data_loader, model, optimizer):
         loss = loss_func(outputs, targets)
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
 
 def evaluate(dataset, data_loader, model):
@@ -106,13 +107,20 @@ def main():
 
     # try some different parameters, or learning_rate_scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, 
-        mode='min', #TODO: change to max and train for recall
-        patience=5,
-        factor=0.3,
-        verbose=True
+        steps_per_epoch=len(train_dataset)//train_dataloader.batch_size,
+        max_lr=1e-3, 
+        epochs=10
         )
+
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    #     optimizer, 
+    #     mode='min', #TODO: change to max and train for recall
+    #     patience=5,
+    #     factor=0.3,
+    #     verbose=True
+    #     )
 
     if torch.cuda.device_count()>1:
         model = nn.DataParallel(model)
@@ -120,10 +128,10 @@ def main():
     #TODO: implement early stopping
 
     for epoch in range(EPOCHS):
-        train(train_dataset, train_dataloader, model, optimizer)
+        train(train_dataset, train_dataloader, model, optimizer, scheduler)
         val_score = evaluate(valid_dataset, valid_dataloader, model)
         logger.info(f"validation_loss: {val_score}")
-        scheduler.step(val_score)
+        # scheduler.step(val_score)
         torch.save(model.state_dict(), f"{BASE_MODEL}_valfold{VALIDATION_FOLDS[0]}.bin")
         
 if __name__ == '__main__':
