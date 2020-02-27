@@ -114,14 +114,6 @@ def main():
         epochs=10
         )
 
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    #     optimizer, 
-    #     mode='min', #TODO: change to max and train for recall
-    #     patience=5,
-    #     factor=0.3,
-    #     verbose=True
-    #     )
-
     if torch.cuda.device_count()>1:
         model = nn.DataParallel(model)
 
