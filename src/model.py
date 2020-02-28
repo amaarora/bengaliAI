@@ -5,14 +5,13 @@ from torch.nn import functional as F
 class Resnet34(nn.Module):
     def __init__(self, pretrained=False):
         super(Resnet34, self).__init__()
-        self.model = models.resnet34(pretrained)
+        model = models.resnet34(pretrained)
         self.features = nn.Sequential(
-            *list(self.model.children())[:-3]
-        )
-
-        self.l0 = nn.Linear(256, 168)
-        self.l1 = nn.Linear(256, 11)
-        self.l2 = nn.Linear(256, 7)
+            *list(model.children())[:-1]
+            )
+        self.l0 = nn.Linear(512, 168)
+        self.l1 = nn.Linear(512, 11)
+        self.l2 = nn.Linear(512, 7)
 
     def forward(self, x):
         bs, _, _, _ = x.shape

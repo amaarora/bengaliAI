@@ -124,7 +124,7 @@ def main():
         val_score = evaluate(valid_dataset, valid_dataloader, model)
         logger.info(f"validation_loss: {val_score}")
         # scheduler.step(val_score)
-        torch.save(model.state_dict(), f"{BASE_MODEL}_valfold{VALIDATION_FOLDS[0]}.bin")
+        torch.save(model.state_dict(), f"./output/{BASE_MODEL}_valfold{VALIDATION_FOLDS[0]}.bin")
         
 if __name__ == '__main__':
     main()
