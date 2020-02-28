@@ -128,6 +128,7 @@ def main():
     #TODO: implement early stopping
 
     for epoch in range(EPOCHS):
+        logger.info(f"running epoch {epoch} of {EPOCHS}..")
         train(train_dataset, train_dataloader, model, optimizer, scheduler)
         val_score = evaluate(valid_dataset, valid_dataloader, model)
         logger.info(f"validation_loss: {val_score}")
