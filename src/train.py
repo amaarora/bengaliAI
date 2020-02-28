@@ -106,11 +106,19 @@ def main():
         )
 
     # try some different parameters, or learning_rate_scheduler
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    learning_rate=1e-3
+    
+    optimizer = torch.optim.Adam([
+        {'params': model.initial_layers.parameters(), 'lr': learning_rate/20},  
+        {'params': model.middle_layers.parameters(), 'lr': learning_rate/5},  
+        {'params': model.later_layers.parameters(), 'lr': learning_rate},  
+        {'params': model.linear_layers.parameters(), 'lr': learning_rate},  
+    ], lr=learning_rate)
+
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, 
         steps_per_epoch=len(train_dataset)//train_dataloader.batch_size,
-        max_lr=1e-3, 
+        max_lr=learning_rate, 
         epochs=10
         )
 
