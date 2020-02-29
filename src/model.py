@@ -46,8 +46,8 @@ class MiniNet(nn.Module):
         self.l1    = nn.Linear(2048, 512)
         self.l2    = nn.Linear(512, n_out)
     
-    def forward(self):
-        return self.l2(F.relu(self.l1))
+    def forward(self, x):
+        return self.l2(F.relu(self.l1(x)))
 
 
 class FinalLayersResnet50(nn.Module):

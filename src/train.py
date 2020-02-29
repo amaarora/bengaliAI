@@ -130,10 +130,10 @@ def main():
     # try some different parameters, or learning_rate_scheduler
     learning_rate=1e-3
     
-    optimizer = torch.optim.Adam([
-        {'params': model.initial_layers.parameters(), 'lr': learning_rate/20},  
-        {'params': model.middle_layers.parameters(), 'lr': learning_rate/5},  
-        {'params': model.later_layers.parameters(), 'lr': learning_rate},  
+    optimizer = torch.optim.Adam([  
+        {'params': model.initial_layers.parameters(), 'lr': learning_rate/100},  
+        {'params': model.middle_layers.parameters(), 'lr': learning_rate/10},  
+        {'params': model.later_layers.parameters(), 'lr': learning_rate/5},  
         {'params': model.linear_layers.parameters(), 'lr': learning_rate},  
     ], lr=learning_rate)
 
