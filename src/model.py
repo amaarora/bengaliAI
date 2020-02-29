@@ -88,5 +88,27 @@ class Resnet50(nn.Module):
         return l0, l1, l2
 
 
+class Resnet101(nn.Module):
+    def __init__(self, pretrained=False):
+        super(Resnet101, self).__init__()
+        model = models.resnet101(pretrained)
+        features = nn.Sequential(
+            *list(model.children())[:-1]
+            )
+        
+        self.initial_layers = features[:5]
+        self.middle_layers  = features[5:7]
+        self.later_layers   = features[7:]
+        self.linear_layers = FinalLayersResnet50()
+        
+    def forward(self, x):
+        bs, _, _, _ = x.shape
+        x  = self.initial_layers(x)
+        x  = self.middle_layers(x)
+        x  = self.later_layers(x)
+
+        x  = F.adaptive_avg_pool2d(x, 1).reshape(bs, -1)
+        l0, l1, l2 = self.linear_layers(x)
+        return l0, l1, l2
 
 

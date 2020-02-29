@@ -109,6 +109,8 @@ def evaluate(dataset, data_loader, model):
 
 def main():
     model = MODEL_DISPATCHER[BASE_MODEL](pretrained=True)
+    model.load_state_dict(torch.load("./output/resnet101_valfold2_checkpoint_5.bin"))
+    logger.info("model weights loaded successfully..")
     model.to(DEVICE)
 
     train_dataset = BengaliDataset(folds=TRAINING_FOLDS)
@@ -128,7 +130,7 @@ def main():
         )
 
     # try some different parameters, or learning_rate_scheduler
-    learning_rate=1e-3
+    learning_rate=1e-4
     
     optimizer = torch.optim.Adam([  
         {'params': model.initial_layers.parameters(), 'lr': learning_rate/100},  
@@ -150,6 +152,24 @@ def main():
     #TODO: implement early stopping
 
     for epoch in range(EPOCHS):
+        if epoch==5: 
+            learning_rate = learning_rate/10
+            logger.info(f"new learning rate: {learning_rate}")
+            
+            optimizer = torch.optim.Adam([  
+                    {'params': model.initial_layers.parameters(), 'lr': learning_rate/100},  
+                    {'params': model.middle_layers.parameters(), 'lr': learning_rate/10},  
+                    {'params': model.later_layers.parameters(), 'lr': learning_rate/5},  
+                    {'params': model.linear_layers.parameters(), 'lr': learning_rate},  
+                    ], lr=learning_rate)
+            
+            scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                optimizer, 
+                steps_per_epoch=int(len(train_dataset)/train_dataloader.batch_size),
+                max_lr=learning_rate, 
+                epochs=EPOCHS
+                )
+        
         logger.info(f"running epoch {epoch+1} of {EPOCHS}..")
         train(train_dataset, train_dataloader, model, optimizer, scheduler)
         val_score = evaluate(valid_dataset, valid_dataloader, model)
