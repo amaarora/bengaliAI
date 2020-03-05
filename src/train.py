@@ -11,6 +11,8 @@ import logging
 from sklearn.metrics import recall_score
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 
 DEVICE = 'cuda'
@@ -62,7 +64,8 @@ def recall_loss(outputs, targets):
 
 def train(dataset, data_loader, model, optimizer, scheduler):
     model.train()
-
+    final_loss = 0
+    counter = 0
     for bi, d in tqdm(enumerate(data_loader), total=int(len(dataset) / data_loader.batch_size)):
         image = d['image']
         grapheme_root = d['grapheme_root']
@@ -81,12 +84,16 @@ def train(dataset, data_loader, model, optimizer, scheduler):
         loss.backward()
         optimizer.step()
         scheduler.step()
+        final_loss += float(loss)
+        counter += 1
+    return final_loss/counter
 
 
 def evaluate(dataset, data_loader, model):
     model.eval()
     final_loss = 0
     counter = 0
+    final_score = 0
     for bi, d in tqdm(enumerate(data_loader), total=int(len(dataset) / data_loader.batch_size)):
         counter+=1
         image = d['image']
@@ -102,23 +109,27 @@ def evaluate(dataset, data_loader, model):
         with torch.no_grad():
             outputs = model(image)
             targets = (grapheme_root, vowel_diacritic, consonant_diacritic)
-            loss = recall_loss(outputs, targets)
+            loss = loss_func(outputs, targets)
+            score = recall_loss(outputs, targets)
             final_loss += loss
-    return final_loss/counter #TODO:better to use actual metric of comp and loss
-
+            final_score += score
+    return final_loss/counter, final_score/counter 
 
 def main():
     model = MODEL_DISPATCHER[BASE_MODEL](pretrained=True)
-    model.load_state_dict(torch.load("./output/resnet101_valfold2_checkpoint_5.bin"))
-    logger.info("model weights loaded successfully..")
     model.to(DEVICE)
 
     train_dataset = BengaliDataset(folds=TRAINING_FOLDS)
+    weight_dict = dict(1/(
+        (train_dataset.df.grapheme_root.value_counts()/len(train_dataset.df))))
+    samples_weight = np.array([weight_dict[t] for t in train_dataset.grapheme_root])
+    
+    sampler = torch.utils.data.sampler.WeightedRandomSampler(
+        samples_weight, len(samples_weight), replacement=False)
+    
     train_dataloader = torch.utils.data.DataLoader(
-        train_dataset, 
-        batch_size=TRAIN_BATCH_SIZE, 
-        shuffle=True,
-        num_workers=4
+        train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=False, 
+        sampler=sampler, num_workers=4
         )
 
     valid_dataset = BengaliDataset(folds=VALIDATION_FOLDS)
@@ -130,7 +141,7 @@ def main():
         )
 
     # try some different parameters, or learning_rate_scheduler
-    learning_rate=1e-4
+    learning_rate=1e-3
     
     optimizer = torch.optim.Adam([  
         {'params': model.initial_layers.parameters(), 'lr': learning_rate/100},  
@@ -149,10 +160,9 @@ def main():
     if torch.cuda.device_count()>1:
         model = nn.DataParallel(model)
 
-    #TODO: implement early stopping
-
+    factor=5
     for epoch in range(EPOCHS):
-        if epoch==5: 
+        if epoch%factor==0 and epoch!=0: 
             learning_rate = learning_rate/10
             logger.info(f"new learning rate: {learning_rate}")
             
@@ -167,14 +177,18 @@ def main():
                 optimizer, 
                 steps_per_epoch=int(len(train_dataset)/train_dataloader.batch_size),
                 max_lr=learning_rate, 
-                epochs=EPOCHS
+                epochs=factor
                 )
         
         logger.info(f"running epoch {epoch+1} of {EPOCHS}..")
-        train(train_dataset, train_dataloader, model, optimizer, scheduler)
-        val_score = evaluate(valid_dataset, valid_dataloader, model)
-        logger.info(f"validation_loss: {val_score}")
-        logger.info(f"saving model checkpoint at ./output/{BASE_MODEL}_valfold{VALIDATION_FOLDS[0]}_checkpoint_{epoch+1}.bin")
+        trn_loss = train(train_dataset, train_dataloader, model, optimizer, scheduler)
+        logger.info(f"train loss: {trn_loss}")
+        val_loss, val_score = evaluate(valid_dataset, valid_dataloader, model)
+        logger.info(f"validation loss: {val_loss}, \nval_score: {val_score}")
+        writer.add_scalars(
+        'resnet101_with_sampler', {'Loss/train': trn_loss, 'Loss/test': val_loss, 'val_score': val_score}, epoch
+    )
+        logger.info(f"saving model checkpoint at ./output/sampler/{BASE_MODEL}_valfold{VALIDATION_FOLDS[0]}_checkpoint_{epoch+1}.bin")
         torch.save(model.state_dict(), f"./output/{BASE_MODEL}_valfold{VALIDATION_FOLDS[0]}_checkpoint_{epoch+1}.bin")
         
 if __name__ == '__main__':

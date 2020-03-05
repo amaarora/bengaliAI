@@ -15,7 +15,8 @@ class BengaliDataset():
         df = pd.read_csv(data_path/'train_folds.csv')
         df = df[['image_id', 'grapheme_root', 'vowel_diacritic', 'consonant_diacritic', 'kfold']]
         df = df[df.kfold.isin(folds)].reset_index(drop=True)
-        self.data_path=data_path
+        self.df = df
+        self.data_path = data_path
         self.img_ids = df['image_id'].values
         self.grapheme_root = df['grapheme_root'].values
         self.vowel_diacritic = df['vowel_diacritic'].values
